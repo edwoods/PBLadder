@@ -11,15 +11,14 @@ import re
 from PyQt5.QtWidgets import QToolButton, QLabel, QTabBar, QTableWidget, QFrame, QMessageBox, QTableWidgetItem
 
 from CopyAsHtml import CopyAsHtml
-from FileIo import loadCsv, SaveAsCsv
-from PlayerClass import PlayerType, AllPlayers, AllSubs, UpdateScores, ColHdrs
+from FileIo import loadCsv, SaveAsCsv, prefs
+from PlayerClass import PlayerType, UpdateScores, ColHdrs
 
 
 class Ui_MainWindow(object):
     # def __init__(self):
 
     def setupUi(self, MainWindow):
-        AllPlayers['fileName'] = ''
         MainWindow.setObjectName("MainWindow")
         MainWindow.setWindowTitle("Pickleball Schedule Maker")
         MainWindow.resize(698, 629)
@@ -128,7 +127,7 @@ class Ui_MainWindow(object):
         n = self.tabWidget.currentIndex()
         table: QTableWidget = self.tabWidget.currentWidget().findChild(QTableWidget)
 
-        for row in range(table.rowCount()-1 ,-1, -1):
+        for row in range(table.rowCount()-1,-1, -1):
             item = table.item(row,0)
             if not item:
                 continue
@@ -146,15 +145,13 @@ class Ui_MainWindow(object):
         colors = [color, white]
         for row in range(table.rowCount()):
             iclr = (row // 4) % 2
-            # print('row ', row, (row // (4*6)) % 2, ' clr ', iclr)
             self.HiliteRow(table, row, colors[iclr])
             table.item(row, 4).setText(times[(row // (4*6)) % 2])
 
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
 
-
-    def CheckTable(self, msg, table):
+    def CheckTable(msg, table):
         for i in range(table.rowCount()):
             if table.item(i,2):
                 print(msg, i, table.item(i,2).text())
@@ -165,7 +162,6 @@ class Ui_MainWindow(object):
                 item = table.item(i, j)
                 if not item:
                     print(msg, i, j)
-
 
     def AddSubs(self):
         #  can only add subs if the current tabs is a score tab
@@ -183,8 +179,6 @@ class Ui_MainWindow(object):
 
         table: QTableWidget = self.tabWidget.currentWidget().findChild(QTableWidget)
         table.setSortingEnabled(False)
-
-        self.CheckTable('before ', table)
 
         # remove all the subs that are in the current score sheet
         for row in range(table.rowCount()-1 ,-1, -1):
@@ -215,11 +209,9 @@ class Ui_MainWindow(object):
                 item2.setData(QtCore.Qt.EditRole, rank)
                 table.setItem(0, 1, item2)
 
-
                 # add the name
                 name = '(sub) ' + subsTable.item(isub, 2).text()
                 table.setItem(0, 2, QtWidgets.QTableWidgetItem(name))
-
 
                 # add the phone
                 phone = subsTable.item(isub, 3).text()
@@ -236,7 +228,6 @@ class Ui_MainWindow(object):
         self.UpdateScoreSheet()
         table.setSortingEnabled(True)
 
-
     def CopyTable(self):
         n = self.tabWidget.currentIndex()
         name = self.tabWidget.tabText(n)
@@ -244,14 +235,10 @@ class Ui_MainWindow(object):
 
         CopyAsHtml(name, table)
 
-
     def IsFileOpen(self, name):
         names = []
         for itab in range(self.tabWidget.count()):
             names.append(self.tabWidget.tabText(itab))
-
-        test = name in names
-        print(test, name,names)
 
         return name in names
 
@@ -266,8 +253,7 @@ class Ui_MainWindow(object):
 
         scoreHdr = ['Status','Rank','Name','Phone', 'time', 'game 1',' game 2','game 3']
         name = name.replace('standings','scores')
-        rows = []
-        rows.append(scoreHdr)
+        rows = [scoreHdr]
 
         # Load the players from the current tab
         plrTable: QTableWidget = self.tabWidget.currentWidget().findChild(QTableWidget)
@@ -276,7 +262,7 @@ class Ui_MainWindow(object):
                 continue
 
             row = []
-            for icol in range(plrTable.columnCount()):
+            for icol in range(4):       # 'Status','Rank','Name','Phone'
                 item = plrTable.item(irow, icol)
                 if item:
                     row.append(item.text())
@@ -291,7 +277,6 @@ class Ui_MainWindow(object):
         table.verticalHeader().setVisible(True)
         self.UpdateScoreSheet()
 
-
     def HiliteRow(self, table, row, color):
         for j in range(table.columnCount()):
             item = table.item(row, j)
@@ -305,7 +290,6 @@ class Ui_MainWindow(object):
         tab.deleteLater()
         self.tabWidget.removeTab(index)
 
-
     def OpenFile(self):
         loadCsv(self)
 
@@ -316,27 +300,29 @@ class Ui_MainWindow(object):
 
         SaveAsCsv(name, table)
 
-
     def UpdateScores(self):
-        sessions = ['01.7.20', '01.14.20','01.21.20','01.28.20','02.4.20','02.11.20','02.18.20','02.25.20','','']
+        sessions = prefs['sessions']  # ['01.7.20', '01.14.20','01.21.20','01.28.20','02.4.20','02.11.20','02.18.20','02.25.20','','']
 
         # check that the current tab has scores
         n = self.tabWidget.currentIndex()
         name = self.tabWidget.tabText(n)
         if 'score' not in name:
-            msg = QMessageBox.warning(None,"Wrong tab selected", "Current tab must be a 'score' tab")
+            QMessageBox.warning(None,"Wrong tab selected", "Current tab must be a 'score' tab")
             return
 
         # see if the corresponding 'player week.csv' file is open
         plrSheet = None
 
-        scrWeek = re.search(r"\d+.\d+.\d+", name).group()
+        # scrWeek = re.search(r"\d+.\d+.\d+", name).group()
+        scrWeek = re.search(r"w\d+", name, re.IGNORECASE).group()
+
         for itab in range(1, self.tabWidget.count()):
             if itab == n:
                 continue
 
             tabName = self.tabWidget.tabText(itab)
-            plrWeek = re.search(r"\d+.\d+.\d+", tabName).group()
+            # plrWeek = re.search(r"\d+.\d+.\d+", tabName).group()
+            plrWeek = re.search(r"w\d+", tabName, re.IGNORECASE).group()
 
             if plrWeek and scrWeek == plrWeek:
                 weekTab = self.tabWidget.widget(itab)
@@ -355,7 +341,6 @@ class Ui_MainWindow(object):
 
         scoreSheet = self.tabWidget.currentWidget().findChild(QTableWidget)
         UpdateScores(self, scoreSheet, plrSheet, nextWeek)
-
 
     def SetPlayers(self, playerList, table = None):
         if not table:
@@ -391,7 +376,6 @@ class Ui_MainWindow(object):
                 if var in lookup:
                     setattr(plr, var, row[lookup[var]])
 
-
     def SavePlayers(self, Rows, ThePlayers):
         hdrNames = [x.lower() for x in Rows[0]]
         playerData = Rows[1:]
@@ -411,13 +395,7 @@ class Ui_MainWindow(object):
                 if var in lookup:
                     setattr(plr, var, playerRow[lookup[var]])
 
-
     def MakeNewTab(self, name, Rows):
-
-        # if (name.startswith('subs')):
-        #     self. SavePlayers(Rows, AllSubs)
-        #     AllSubs['fileName'] = name
-
         scoreSheet = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -444,8 +422,8 @@ class Ui_MainWindow(object):
                 for icol, col in enumerate(row):
                     item = QtWidgets.QTableWidgetItem(col)
                     if icol == ColHdrs.rank.value and col:
-                            item = QtWidgets.QTableWidgetItem()
-                            item.setData(QtCore.Qt.EditRole, float(col))
+                        item = QtWidgets.QTableWidgetItem()
+                        item.setData(QtCore.Qt.EditRole, float(col))
 
                     table.setItem(irow - 1, icol, item)
 
@@ -465,6 +443,9 @@ class Ui_MainWindow(object):
         else:
             self.HiliteAlternateRows(table)
 
+        table.setObjectName(name)
+        table.cellChanged.connect(lambda: self.tableChanged(name, table))
+
         return table
 
     def HiliteAlternateRows(self, table):
@@ -472,8 +453,13 @@ class Ui_MainWindow(object):
         white = QtGui.QColor(255, 255, 255)
         colors = [color, white]
         for row in range(table.rowCount()):
-            iclr = row  % 2
+            iclr = row % 2
             self.HiliteRow(table, row, colors[iclr])
 
-    def tableChanged(item, table):
+    def tableChanged(self, name, table):
+        if 'score' in name:
+            pass
+        else:
+            self.HiliteAlternateRows(table)
+
         x = 0

@@ -1,0 +1,9 @@
+dir, E:/Pickleball/spring 2020
+
+nWeeks, 5, int
+scoreScale, 4, float
+
+dir,C:\Users\Ed\PycharmProjects\PB Ladder
+dir,E:\Pickleball\spring 2020
+dir,E:\Pickleball\The Y spring
+dir,E:\Pickleball\spring 2020

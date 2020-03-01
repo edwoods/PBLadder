@@ -18,7 +18,7 @@ def CopyAsHtml(tableName, table):
     fontColors = [['"#000000"','"#000000"',],   # player font is black
                 ['"#ffff99"', '"#ffffff"']]     # score font is black or dark red
 
-    BgColors = [[ '"#ffffff"',  '"#ffffff"'],    # player bg is white
+    BgColors = [[ '"#ffffff"',  '"#e0e0e0"'],    # player bg is white
         ['"#ffff99"', '"#ffffff"']]             # score alternate every 4 rows: yellowish, white
 
     intros = [playerIntro, scoreIntro]
@@ -31,29 +31,37 @@ def CopyAsHtml(tableName, table):
     html += '<tbody><tr bgcolor=' + hdrColors[tType] + '>'
 
     # column headers
-    for col in range(table.columnCount()):
+    plainText = ''
+    for col in range(1,table.columnCount()):
         name = table.horizontalHeaderItem(col).text()
         html += '<th>' + name + '</th>'
+        plainText += name + ','
 
     html += '</tr>'
+    plainText = plainText[:-1]  # remove last ','
 
     #  table rows
     for row in range(table.rowCount()):
-        irow = (row // 4) % 2
-        print(row, irow)
-        html += '<tr bgcolor=' + BgColors[tType][irow] + '; ' + 'font color=' + fontColors[tType][irow] + '>'
-        for col in range(table.columnCount()):
+
+        if tType == 1:   # score table
+            irow = (row // 4) % 2
+            html += '<tr bgcolor=' + BgColors[tType][irow] + '; ' + 'font color=' + fontColors[tType][irow] + '>'
+        else:   # hilite alternate rows
+            irow = row % 2
+            html += '<tr bgcolor=' + BgColors[tType][irow] + '; ' + 'font color=' + fontColors[tType][irow] + '>'
+
+        for col in range(1, table.columnCount()):
             name = table.item(row,col).text()
             html += '<td>' + name + '</td>'
+            plainText += name + ','
         html += '</tr>'
+
+        plainText = plainText[:-1] + '\n'
 
     html += '</tbody></table></body></html>'
 
     mimeData = QMimeData()
     mimeData.setHtml(html)
+    mimeData.setText(plainText)
     clipboard = QApplication.clipboard()
     clipboard.setMimeData(mimeData)
-
-
-
-

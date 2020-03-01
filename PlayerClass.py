@@ -25,10 +25,6 @@ class PlayerType(object):
         self.status = ''
 
 
-AllPlayers = {}
-AllSubs = {}
-
-
 def UpdateScores(MainWindow, ScoreTable, standingsTable, nextSession):
     """
     :type ScoreTable: QTableWidget
@@ -38,6 +34,22 @@ def UpdateScores(MainWindow, ScoreTable, standingsTable, nextSession):
         QMessageBox.warning(None, "Score Table error",
                             "The Score Table has already been processed")
         return
+
+    # make sure that the score table is filled in
+    for row in range(ScoreTable.rowCount()):
+        for col in range(5,8):
+            item = ScoreTable.item(row, col)
+            if not item:
+                QMessageBox.warning(None, "Score Table error",
+                    'No value in row,col: ' +  str(row+1) + ' ' + str(col+1))
+                return
+            else:
+                try:
+                    x = int(item.text())
+                except ValueError:
+                    QMessageBox.warning(None, "Score Table error",
+                      'The value "' + item.text() + '" must be an int. in row:col ' + str(row + 1) + ':' + str(col + 1))
+                    return
 
     # load the ldr player name from the plrTable tab
     ldrPlrNames = [standingsTable.item(i, 2).text() for i in range(standingsTable.rowCount())]
